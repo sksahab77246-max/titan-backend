@@ -1,2 +1,1 @@
-# No extra packages needed — search.py uses only Python stdlib
-# (urllib, json, re) so Vercel deploys instantly with no build time.
+
