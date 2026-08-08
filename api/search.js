@@ -12,7 +12,6 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "GEMINI_API_KEY Missing" });
   }
 
-  // Extract Prompt & Image
   let query = req.query.q || "Analyze this request";
   let image = null;
   let mimeType = null;
@@ -24,12 +23,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const parts = [];
+    const parts = [{ text: query }];
 
-    // Pehle prompt text add karein
-    parts.push({ text: query });
-
-    // Agar Image aayi hai toh inline_data format mein add karein
     if (image && mimeType) {
       parts.push({
         inline_data: {
@@ -39,21 +34,16 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Official Gemini 1.5 Flash Endpoint
+    // Google ke active endpoint gemini-2.5-flash ko route kiya gaya hai
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: parts
-            }
-          ]
+          contents: [{ parts: parts }]
         }),
       }
     );
@@ -61,7 +51,6 @@ module.exports = async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API Error:", data);
       return res.status(response.status).json({ 
         reply: `API Error: ${data.error?.message || "Failed to analyze image."}` 
       });
@@ -71,7 +60,7 @@ module.exports = async (req, res) => {
 
     if (!replyText) {
       return res.status(200).json({ 
-        reply: "Image read ho gayi hai lekin koi clear threat/text identify nahi hua. Koshish karein ke clear image ya receipt upload karein." 
+        reply: "Image receive ho gayi hai lekin details generate nahi ho sakti." 
       });
     }
 
