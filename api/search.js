@@ -1,15 +1,24 @@
 module.exports = async (req, res) => {
-  // Allow requests from GitHub Pages & all origins
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  const query = req.query.q || "hello";
+  // Support both GET (query param) and POST (JSON body)
+  let query = req.query.q || "Analyze this request";
+  let image = null;
+  let mimeType = null;
+
+  if (req.method === 'POST' && req.body) {
+    query = req.body.prompt || query;
+    image = req.body.image || null;
+    mimeType = req.body.mimeType || null;
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -17,6 +26,18 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const parts = [{ text: query }];
+
+    // If image data is sent from frontend
+    if (image && mimeType) {
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: image
+        }
+      });
+    }
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -25,7 +46,7 @@ module.exports = async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: query }] }],
+          contents: [{ parts: parts }],
         }),
       }
     );
